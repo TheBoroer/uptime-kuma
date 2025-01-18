@@ -1,7 +1,7 @@
 const { R } = require("redbean-node");
-const HttpProxyAgent = require("http-proxy-agent");
-const HttpsProxyAgent = require("https-proxy-agent");
-const SocksProxyAgent = require("socks-proxy-agent");
+const { HttpProxyAgent } = require("http-proxy-agent");
+const { HttpsProxyAgent } = require("https-proxy-agent");
+const { SocksProxyAgent } = require("socks-proxy-agent");
 const { debug } = require("../src/util");
 const { UptimeKumaServer } = require("./uptime-kuma-server");
 
@@ -97,41 +97,35 @@ class Proxy {
         let httpAgent;
         let httpsAgent;
 
-        const proxyOptions = {
-            protocol: proxy.protocol,
-            host: proxy.host,
-            port: proxy.port,
-        };
+        const proxyUrl = new URL(`${proxy.protocol}://${proxy.host}:${proxy.port}`);
 
         if (proxy.auth) {
-            proxyOptions.auth = `${proxy.username}:${proxy.password}`;
+            proxyUrl.username = proxy.username;
+            proxyUrl.password = proxy.password;
         }
 
-        debug(`Proxy Options: ${JSON.stringify(proxyOptions)}`);
+        debug(`Proxy URL: ${proxyUrl.toString()}`);
         debug(`HTTP Agent Options: ${JSON.stringify(httpAgentOptions)}`);
         debug(`HTTPS Agent Options: ${JSON.stringify(httpsAgentOptions)}`);
 
         switch (proxy.protocol) {
             case "http":
             case "https":
-                httpAgent = new HttpProxyAgent({
-                    ...httpAgentOptions || {},
-                    ...proxyOptions
+                httpAgent = new HttpProxyAgent(proxyUrl.toString(), {
+                    ...(httpAgentOptions || {}),
                 });
 
-                httpsAgent = new HttpsProxyAgent({
-                    ...httpsAgentOptions || {},
-                    ...proxyOptions,
+                httpsAgent = new HttpsProxyAgent(proxyUrl.toString(), {
+                    ...(httpsAgentOptions || {}),
                 });
                 break;
             case "socks":
             case "socks5":
             case "socks5h":
             case "socks4":
-                agent = new SocksProxyAgent({
+                agent = new SocksProxyAgent(proxyUrl.toString(), {
                     ...httpAgentOptions,
                     ...httpsAgentOptions,
-                    ...proxyOptions,
                     tls: {
                         rejectUnauthorized: httpsAgentOptions.rejectUnauthorized,
                     },
